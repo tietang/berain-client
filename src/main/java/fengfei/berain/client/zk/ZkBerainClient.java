@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.zookeeper.WatchedEvent;
 
@@ -11,6 +12,7 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.api.CuratorWatcher;
 import com.netflix.curator.framework.imps.CuratorFrameworkState;
+import com.netflix.curator.framework.recipes.locks.InterProcessMutex;
 import com.netflix.curator.retry.RetryNTimes;
 
 import fengfei.berain.client.BerainClient;
@@ -63,12 +65,15 @@ public class ZkBerainClient implements BerainClient {
 		initNamespace();
 	}
 
+	public CuratorFramework getClient() {
+		return client;
+	}
+
 	public CuratorFramework getCuratorFramework() {
 		return client;
 	}
 
 	public void initNamespace() {
-		 
 	}
 
 	public boolean exists(String path) throws Exception {
@@ -79,6 +84,13 @@ public class ZkBerainClient implements BerainClient {
 	public void start() {
 		if (client.getState() != CuratorFrameworkState.STARTED) {
 			client.start();
+		}
+	}
+
+	@Override
+	public void stop() {
+		if (client.getState() != CuratorFrameworkState.STOPPED) {
+			client.close();
 		}
 	}
 
@@ -104,15 +116,70 @@ public class ZkBerainClient implements BerainClient {
 		return true;
 	}
 
+	public static final String LOCKPATH = "/copylock";
+	public static final long MAXWAIT = 60;
+	public static final TimeUnit WAITUNIT = TimeUnit.SECONDS;
+
+	public static void main(String[] args) throws Exception {
+		CuratorFramework framework = CuratorFrameworkFactory
+				.builder()
+				.connectString("127.0.0.1")
+				.namespace("tx")
+				.retryPolicy(new RetryNTimes(2, 3000))
+				.connectionTimeoutMs(60000)
+				.build();
+		ZkBerainClient client = new ZkBerainClient(framework);
+		client.start();
+		String ppath = "/e1";
+		client.create(ppath, "x1");
+		for (int i = 0; i < 3; i++) {
+			String path = ppath + "/f" + i;
+			client.create(path, "x1" + i);
+			for (int j = 0; j < 4; j++) {
+				String cpath = path + "/h" + j;
+				client.create(cpath, "x1" + i + j);
+			}
+		}
+		System.out.println(client.nextChildren(ppath));
+		client.create("c1", "x1");
+		System.out.println(client.nextChildren("c1"));
+		client.copy(ppath, "/a1");
+		client.stop();
+	}
+
 	@Override
 	public boolean copy(String originalPath, String newPath) throws Exception {
-		// TODO Auto-generated method stub
+		InterProcessMutex lock = new InterProcessMutex(client, LOCKPATH);
+		if (lock.acquire(MAXWAIT, WAITUNIT)) {
+			try {
+				String value = get(originalPath);
+				create(newPath, value);
+				copyChildren(originalPath, newPath);
+			} finally {
+				lock.release();
+			}
+		}
 		return true;
 	}
+
+	private void copyChildren(String originalPath, String newPath) throws Exception {
+		List<BerainEntry> children = nextChildren(originalPath);
+		if (children == null || children.isEmpty()) {
+			return;
+		}
+		for (BerainEntry entry : children) {
+			String childPath = entry.getPath();
+			String newChildPath = childPath.replace(originalPath, newPath);
+			create(newChildPath, entry.getValue());
+			copyChildren(childPath, newChildPath);
+		}
+	}
+
 	public static String getKey(String path) {
 		String[] ps = path.split("/");
 		return ps[ps.length - 1];
 	}
+
 	@Override
 	public List<BerainEntry> nextChildren(String parentPath) throws Exception {
 		List<BerainEntry> models = new ArrayList<>();
@@ -128,7 +195,6 @@ public class ZkBerainClient implements BerainClient {
 				models.add(model);
 			}
 		}
-		System.out.println(models);
 		return models;
 	}
 
@@ -147,11 +213,6 @@ public class ZkBerainClient implements BerainClient {
 		model.path = path;
 		model.value = new String(data);
 		return model;
-	}
-
-	@Override
-	public void addWatchable(String path, EventType type, Wather wather) throws Exception {
-		throw new UnsupportedOperationException("don't implemtments.");
 	}
 
 	public void addChildrenChangedWatcher(final String path, final Wather wather)
@@ -186,19 +247,27 @@ public class ZkBerainClient implements BerainClient {
 		client.getData().usingWatcher(watcher).forPath(path);
 	}
 
+	@Deprecated
 	@Override
 	public void removeWatchable(String path, int type) throws Exception {
-		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("don't implemtments.");
 	}
 
+	@Deprecated
+	@Override
+	public void addWatchable(String path, EventType type, Wather wather) throws Exception {
+		throw new UnsupportedOperationException("don't implemtments.");
+	}
+
+	@Deprecated
 	@Override
 	public Map<String, List<BerainWatchedEvent>> listChangedNodes() throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException("don't implemtments.");
 	}
 
+	@Deprecated
 	@Override
 	public void removeAllListener() throws Exception {
-		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("don't implemtments.");
 	}
 }

@@ -7,6 +7,8 @@ public interface BerainClient {
 
 	void start();
 
+	void stop();
+
 	/**
 	 * if has password
 	 */
@@ -36,7 +38,6 @@ public interface BerainClient {
 
 	public void addNodeChangedWatcher(final String path, final Wather wather)
 			throws Exception;
-
 
 	void addWatchable(String path, EventType type, Wather wather) throws Exception;
 

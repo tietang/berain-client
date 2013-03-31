@@ -214,3 +214,6 @@ pip-log.txt
 */lib/xmpcore.jar
 /sprucy/lib/mongo-java-driver-2.9.0-RC1.jar
 /berain-server/db
+/data
+/temp_data
+/temp_data
