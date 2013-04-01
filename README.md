@@ -38,7 +38,7 @@ Usage
 			<url>http://fengfei.googlecode.com/svn/maven-repo/releases</url>
 		</repository>
 
-**dependency:**
+**use it as a maven dependency:**
 
 		<dependency>
 			<groupId>fengfei.berain</groupId>
