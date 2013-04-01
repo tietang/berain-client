@@ -29,7 +29,22 @@ Features
 
 Usage
 -------
+### maven dependency###
+**add repository**
 
+		<repository>
+			<id>fengfei-repo</id>
+			<name>fengfei Repository </name>
+			<url>http://fengfei.googlecode.com/svn/maven-repo/releases</url>
+		</repository>
+
+**dependency:**
+
+		<dependency>
+			<groupId>fengfei.berain</groupId>
+			<artifactId>berain-client</artifactId>
+			<version>1.0</version>
+		</dependency>
 
 ###example1:###
 
