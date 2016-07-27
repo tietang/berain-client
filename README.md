@@ -1,6 +1,6 @@
 [Berain](https://github.com/fengfei1000/berain)
 =======
-
+[![Build Status](https://travis-ci.org/tietang/berain-client.svg?branch=master)](https://travis-ci.org/tietang/berain-client)
 
 Berain is a simple high-performance coordination service for distributed applications
  
